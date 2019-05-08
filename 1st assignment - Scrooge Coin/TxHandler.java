@@ -1,6 +1,5 @@
-import com.sun.org.apache.xml.internal.serializer.ElemDesc;
-
-public class TxHandler {
+public class TxHandler 
+{
 
     UTXOPool unspendPool;
 
@@ -89,8 +88,37 @@ public class TxHandler {
      * transaction for correctness, returning a mutually valid array of accepted transactions, and
      * updating the current UTXO pool as appropriate.
      */
-    public Transaction[] handleTxs(Transaction[] possibleTxs) {
-        return possibleTxs;
-    }
+    public Transaction[] handleTxs(Transaction[] possibleTxs) 
+    {
+        Transaction[] validTXs = new Transaction[possibleTxs.length];
+        int i = 0;
 
+        UTXOPool tmpPool = new UTXOPool();
+
+        /*for(int j=0; j<possibleTxs.length; j++) 
+        {
+            Transaction tx = possibleTxs[j];
+        */
+        for(Transaction tx : possibleTxs) 
+        {
+            
+            if(isValidTx(tx) == false){continue;}
+
+            int j=0;
+            while(j<tx.numInputs())
+            { 
+                UTXO prevTX = new UTXO(tx.getInput(j).prevTxHash,tx.getInput(j).outputIndex);
+                if(tmpPool.contains(prevTX)){break;}
+                else{tmpPool.addUTXO(prevTX, unspendPool.getTxOutput(prevTX));}
+                j++;
+            }
+
+            if(j != tx.numInputs()){continue;}
+
+            validTXs[i] = tx;
+            i++;
+        }
+
+        return validTXs;
+    }
 }
