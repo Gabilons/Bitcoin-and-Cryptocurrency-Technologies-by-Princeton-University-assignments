@@ -1,12 +1,17 @@
+import com.sun.org.apache.xml.internal.serializer.ElemDesc;
+
 public class TxHandler {
+
+    UTXOPool unspendPool;
 
     /**
      * Creates a public ledger whose current UTXOPool (collection of unspent transaction outputs) is
      * {@code utxoPool}. This should make a copy of utxoPool by using the UTXOPool(UTXOPool uPool)
      * constructor.
      */
-    public TxHandler(UTXOPool utxoPool) {
-        // IMPLEMENT THIS
+    public TxHandler(UTXOPool utxoPool) 
+    {
+        unspendPool = new UTXOPool(utxoPool);
     }
 
     /**
@@ -18,7 +23,64 @@ public class TxHandler {
      * (5) the sum of {@code tx}s input values is greater than or equal to the sum of its output
      *     values; and false otherwise.
      */
-    public boolean isValidTx(Transaction tx) {
+    public boolean isValidTx(Transaction tx) 
+    {
+        if(tx == null) {return false;}
+
+        int numTXInputs = tx.numInputs();
+        int numTXOutputs = tx.numOutputs();
+
+        UTXOPool tmpPool = new UTXOPool();
+
+        double sumInput = 0;
+
+        for(int i=0; i<numTXInputs; i++)
+        {
+            UTXO prevTX = new UTXO(tx.getInput(i).prevTxHash,tx.getInput(i).outputIndex);
+
+            // (1) all outputs claimed by {@code tx} are in the current UTXO pool
+            if(unspendPool.contains(prevTX) == false)
+            {
+                return false;
+            }
+
+            // (2) the signatures on each input of {@code tx} are valid
+            if(Crypto.verifySignature(unspendPool.getTxOutput(prevTX).address, tx.getRawDataToSign(i), tx.getInput(i).signature) == false)
+            {
+                return false;
+            }
+
+            // (3) no UTXO is claimed multiple times by {@code tx}
+            if(tmpPool.contains(prevTX))
+            {
+                return false;
+            }
+            else
+            {
+                tmpPool.addUTXO(prevTX, unspendPool.getTxOutput(prevTX));
+            }
+
+            // (5) the sum of {@code tx}s input values is greater than or equal to the sum of its output values; and false otherwise.
+            sumInput +=  unspendPool.getTxOutput(prevTX).value;
+        }
+
+        double sumOutput = 0;
+
+        for(int i=0; i<numTXOutputs; i++)
+        {
+            // (4) all of {@code tx}s output values are non-negative
+            if(tx.getOutput(i).value < 0)
+            {
+                return false;
+            }
+
+            // (5) the sum of {@code tx}s input values is greater than or equal to the sum of its output values; and false otherwise.
+            sumOutput += tx.getOutput(i).value;
+        }
+
+        // (5) the sum of {@code tx}s input values is greater than or equal to the sum of its output values; and false otherwise.
+        if(sumInput < sumOutput){return false;}
+
         return true;
     }
 
@@ -28,7 +90,7 @@ public class TxHandler {
      * updating the current UTXO pool as appropriate.
      */
     public Transaction[] handleTxs(Transaction[] possibleTxs) {
-        // IMPLEMENT THIS
+        return possibleTxs;
     }
 
 }
